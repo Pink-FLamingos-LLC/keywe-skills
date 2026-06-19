@@ -2,28 +2,31 @@
 
 ## Contents
 
-- Reservation Fields table
+- Reservation Fields table (including textOptIn)
 - Endpoints (GET, POST, GET/{id}, PATCH/{id}, DELETE/{id})
 - Check-in (POST /api/checkin)
+- Public Embed Endpoint (PATCH /api/embed/reservations/{id})
 - Phone Normalization
 
 ## Reservation Fields
 
-| Field           | Type   | Description                              |
-| --------------- | ------ | ---------------------------------------- | ----------------------------------------------------------------- | ------ |
-| `id`            | string | UUID                                     |
-| `name`          | string | Guest name (required, max 200)           |
-| `email`         | string | null                                     | Guest email (optional, must be valid format if provided, max 254) |
-| `guestPhone`    | string | null                                     | E.164 format (auto-normalized via libphonenumber-js, max 30)      |
-| `notes`         | string | null                                     | Internal notes (max 2000)                                         |
-| `accessPointId` | string | null                                     | Assigned room                                                     |
-| `checkIn`       | string | null                                     | ISO 8601 datetime                                                 |
-| `checkOut`      | string | null                                     | ISO 8601 datetime                                                 |
-| `status`        | string | e.g. "confirmed", "pending", "cancelled" |
-| `guestEmail`    | string | null                                     | Secondary guest email for messaging                               |
-| `checkInStatus` | string | null                                     | "pending"                                                         | "sent" |
-| `propertyName`  | string | null                                     | (Read-only, populated on list/get)                                |
-| `roomName`      | string | null                                     | (Read-only, populated on list/get)                                |
+| Field           | Type    | Description                              |
+| --------------- | ------- | ---------------------------------------- | ----------------------------------------------------------------- | ------ |
+| `id`            | string  | UUID                                     |
+| `name`          | string  | Guest name (required, max 200)           |
+| `email`         | string  | null                                     | Guest email (optional, must be valid format if provided, max 254) |
+| `guestPhone`    | string  | null                                     | E.164 format (auto-normalized via libphonenumber-js, max 30)      |
+| `notes`         | string  | null                                     | Internal notes (max 2000)                                         |
+| `accessPointId` | string  | null                                     | Assigned room                                                     |
+| `checkIn`       | string  | null                                     | ISO 8601 datetime                                                 |
+| `checkOut`      | string  | null                                     | ISO 8601 datetime                                                 |
+| `status`        | string  | e.g. "confirmed", "pending", "cancelled" |
+| `guestEmail`    | string  | null                                     | Secondary guest email for messaging                               |
+| `checkInStatus` | string  | null                                     | "pending"                                                         | "sent" |
+| `propertyName`  | string  | null                                     | (Read-only, populated on list/get)                                |
+| `roomName`      | string  | null                                     | (Read-only, populated on list/get)                                |
+| `textOptIn`     | boolean | false                                    | Guest SMS consent (set by embed widget)                           |
+| `textOptInAt`   | string  | null                                     | Timestamp when guest consented to SMS                             |
 
 ## Endpoints
 
@@ -139,6 +142,25 @@ or
 - `400` if required field missing for channel
 - `404` if no reservation found
 - `400` if email address is blocked (bounced/complained)
+
+### Public Embed Endpoint
+
+The embed widget uses a public (no auth) endpoint at `/api/embed/reservations/{id}`. Only `guestPhone`, `textOptIn`, and `textOptInAt` can be modified through this endpoint. Origin-validated to `localhost` and `*.keywe.cloud`.
+
+Used internally by the `<keywe-verify-reservation>` web component — not intended for direct API consumption.
+
+**Request:**
+
+```json
+{
+  "guestPhone": "+17155551234",
+  "textOptIn": true
+}
+```
+
+The `checked` alias is accepted for `textOptIn` (values: `"checked"`, `"unchecked"`, or boolean).
+
+---
 
 ## Phone Normalization
 

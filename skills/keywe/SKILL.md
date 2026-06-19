@@ -182,6 +182,65 @@ uv run <skill-dir>/scripts/client.py --action schlage-logout
 
 **Response:** `{"detail": "ok"}`
 
+## Embed Widget (Guest-Facing Verification)
+
+The Embed Widget is a web component that you put on your own website to let guests verify their booking and opt in to SMS. It renders a phone input + consent checkbox inside a shadow DOM iframe.
+
+**Workflow:**
+
+1. Create a reservation to get a reservation ID
+2. Put the embed component on your page with that reservation ID
+3. Guest enters phone, checks consent, and the widget dispatches a `success` event
+4. The success updates `textOptIn` and `textOptInAt` on the reservation record
+
+### Quick Start
+
+**Important:** Always set `property-name` — it appears in the SMS consent text the guest agrees to. The guest must see which company they're consenting to.
+
+```html
+<script src="https://keywe.cloud/embed.js"></script>
+
+<style>
+  keywe-verify-reservation {
+    --keywe-primary-color: #4f46e5;
+    --keywe-border-radius: 12px;
+    --keywe-font-family: Inter;
+  }
+</style>
+
+<keywe-verify-reservation
+  reservation-id="res_your_reservation_id"
+  property-name="Clear Water Properties"
+  theme="light"
+></keywe-verify-reservation>
+
+<script>
+  const widget = document.querySelector("keywe-verify-reservation");
+  let bookingEnabled = false;
+
+  widget.addEventListener("success", (event) => {
+    // event.detail = { reservationId, guestPhone, checked }
+    // checked is "checked" (string) when guest consented
+    if (event.detail.checked === "checked") {
+      bookingEnabled = true;
+      // Enable "Complete Booking" button
+    }
+  });
+</script>
+```
+
+### Embed Code
+
+Always prefer the CSS variables approach for styling (shown above). All customization options are available as either CSS variables or HTML attributes. See `references/embed.md` for the full option table.
+
+### Preview and Theming
+
+Visit `/embed/preview` on your KeyWe instance to interactively configure the widget, see live preview, and copy the generated embed code. You can also ask the AI to analyze your website's design and produce a themed version with CSS variables matched to your brand.
+
+### Reservation IDs
+
+You must create a reservation first before using the embed widget. The `reservation-id` attribute on the component must match an existing reservation in the system. Use the API or MCP `create-reservation` tool to generate one, then pass its `id` to the embed component.
+
 ## Reference Files
 
 Detailed API schemas, request/response examples, and field-level documentation for each domain:
@@ -190,10 +249,11 @@ Detailed API schemas, request/response examples, and field-level documentation f
 | ------------------------------------------- | --------------------------------------------------------------------------- |
 | `references/properties.md`                  | Properties, access points, locks CRUD, link/unlink, field tables            |
 | `references/schlage.md`                     | Schlage auth flow, proxy endpoints, lock ops, access codes, logs, auto-sync |
-| `references/reservations.md`                | Reservations CRUD, check-in, phone normalization                            |
+| `references/reservations.md`                | Reservations CRUD, check-in, phone normalization, textOptIn                 |
 | `references/messaging.md`                   | Templates CRUD, send message, message history/list                          |
 | `references/automations.md`                 | Automation CRUD, trigger/condition/action configs, events                   |
 | `references/account.md`                     | API keys, account export/delete, Schlage credentials, Better Auth           |
+| `references/embed.md`                       | Embed widget setup, CSS variables, attributes, events, preview page         |
 | `references/common-use-cases.md`            | Common multi-step provisioning and guest management workflows               |
 | `references/troubleshooting-workarounds.md` | Known issues, error conditions, and resolution steps                        |
 

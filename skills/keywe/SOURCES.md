@@ -15,6 +15,7 @@ The KeyWe application codebase at `/home/corey/workspace/keywe-app/` was analyze
 | Automations                           | `src/routes/api/automations/*`, `src/lib/server/db/automations.ts`                                                                              | Full                               |
 | Account & Auth                        | `src/routes/api/account/*`, `src/lib/server/auth.ts`, `src/lib/server/api-keys.ts`, `src/lib/server/db/auth-keys.ts`                            | Full                               |
 | Dashboard                             | `src/lib/server/db/dashboard.ts`                                                                                                                | Partial (not in reference files)   |
+| Embed Widget                          | `src/routes/embed/*`, `src/routes/api/embed/*`, `static/embed.js`                                                                               | Full                               |
 | MCP Server                            | `src/lib/mcp/index.ts`                                                                                                                          | Partial (schlage tools referenced) |
 | Chat/WebSocket                        | `src/durable-objects/chat-room.ts`                                                                                                              | Not covered                        |
 
@@ -27,3 +28,4 @@ Codebase exploration via task agent (subagent_type: general) with comprehensive 
 - 2025-06-18: Initial skill creation with 6 API domain reference files
 - 2025-06-18: Added SCHLAGE_EMAIL/SCHLAGE_PASSWORD env var pattern, schlage-login/schlage-logout actions
 - 2025-06-18: Fixed SKILL.md compliance (emojis removed, frontmatter corrected), added SOURCES.md, common-use-cases.md, troubleshooting-workarounds.md, moved to .opencode/skills/
+- 2025-06-19: Added embed.md reference, embed widget section to SKILL.md, textOptIn fields to reservations.md
