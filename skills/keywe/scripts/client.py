@@ -1,6 +1,9 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["requests>=2.31.0"]
+# dependencies = [
+#   "requests>=2.31.0",
+#   "python-dotenv>=1.0.0",
+# ]
 # ///
 
 import os
@@ -8,6 +11,9 @@ import sys
 import json
 import argparse
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def get_env_config():
     api_key = os.getenv("KEYWE_API_KEY")
@@ -49,7 +55,9 @@ def handle_response(response):
 def main():
     parser = argparse.ArgumentParser(description="KeyWe Core API Client")
     parser.add_argument("--action", required=True, choices=[
-        "add-property", "add-access-point", "add-lock", "add-template", "add-reservation", "add-automation", "schlage-login", "schlage-logout"
+        "add-property", "add-access-point", "add-lock", "add-template", "add-reservation", "add-automation",
+        "schlage-login", "schlage-logout",
+        "lock", "unlock", "list-locks", "lock-status"
     ])
     parser.add_argument("--name")
     parser.add_argument("--address")
@@ -153,6 +161,25 @@ def main():
 
     elif args.action == "schlage-logout":
         res = requests.post(f"{base_url}/api/schlage/auth/logout", headers=headers)
+        handle_response(res)
+
+    elif args.action == "list-locks":
+        res = requests.get(f"{base_url}/api/schlage/locks", headers=headers)
+        handle_response(res)
+
+    elif args.action == "lock-status":
+        if not args.device_id:
+            print("ERROR: --device-id is required.", file=sys.stderr)
+            sys.exit(1)
+        res = requests.get(f"{base_url}/api/schlage/locks/{args.device_id}", headers=headers)
+        handle_response(res)
+
+    elif args.action in ("lock", "unlock"):
+        if not args.device_id:
+            print("ERROR: --device-id is required.", file=sys.stderr)
+            sys.exit(1)
+        path = f"{base_url}/api/schlage/locks/{args.device_id}/{args.action}"
+        res = requests.post(path, headers=headers)
         handle_response(res)
 
 if __name__ == "__main__":

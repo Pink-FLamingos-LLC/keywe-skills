@@ -1,6 +1,6 @@
 ---
 name: keywe
-description: Set up and automate vacation rental properties, smart locks, guest messaging, and reservations. Use when asked to "add a property", "create a reservation", "connect a lock", "automate guest messages", "set up check-in", "provision a rental", "add an access point", "link a Schlage lock", "create a message template", "configure automation triggers", "manage reservations", "set up Schlage", "send message to guest", "unlock door", "create access code", "monitor lock battery", or "smart lock setup".
+description: Set up and automate vacation rental properties, smart locks, guest messaging, and reservations. Use when asked to "add a property", "create a reservation", "connect a lock", "automate guest messages", "set up check-in", "provision a rental", "add an access point", "link a Schlage lock", "create a message template", "configure automation triggers", "manage reservations", "set up Schlage", "send message to guest", "unlock door", "lock door", "control locks", "send lock command", "list locks", "check lock status", "create access code", "monitor lock battery", or "smart lock setup".
 ---
 
 # KeyWe Property and Lock Automation
@@ -93,6 +93,78 @@ uv run <skill-dir>/scripts/client.py --action add-property --name "Example Name"
 - Do not type the `$` sign if you see one in examples — that is just showing the prompt.
 - If you get an error like `command not found: uv`, you need to install Python's `uv` tool first. Ask your host for help with this.
 - If you get a `401` or `Unauthorized` error, go back to Step 4 and make sure `KEYWE_API_KEY` is set correctly.
+
+## Using KeyWe as an API to Control Locks
+
+This section covers sending lock and unlock commands to Schlage smart locks through KeyWe's API proxy. These commands work on any Schlage lock connected to your account.
+
+### Prerequisite: Schlage Authentication
+
+You must authenticate with Schlage before you can send lock commands. If you haven't done this yet:
+
+1. Set your Schlage credentials in the environment (see Step 5 above)
+2. Run the login command:
+
+```bash
+uv run <skill-dir>/scripts/client.py --action schlage-login
+```
+
+A successful response looks like `{"access_token": "...", "expires_in": 86400}`. You only need to do this once — the platform refreshes the token automatically.
+
+### Step 1: List Locks
+
+Find all Schlage locks on your account and their device IDs:
+
+```bash
+uv run <skill-dir>/scripts/client.py --action list-locks
+```
+
+**Response:** An array of lock objects. Each lock has a `device_id` field (like `SCH-ENCODE-12345`) and a `name` field so you can identify which door is which. The response also includes `is_locked` (current state), `battery_level`, and `model_name`.
+
+### Step 2: Check a Specific Lock's Status
+
+To check whether a particular door is locked or unlocked, along with its battery level and other details:
+
+```bash
+uv run <skill-dir>/scripts/client.py --action lock-status --device-id "SCH-ENCODE-12345"
+```
+
+**Response:** `{"device_id": "SCH-ENCODE-12345", "name": "Front Door", "is_locked": true, "battery_level": 85, ...}`
+
+### Step 3: Lock a Door
+
+Send a lock command to a specific door:
+
+```bash
+uv run <skill-dir>/scripts/client.py --action lock --device-id "SCH-ENCODE-12345"
+```
+
+**Response:** A confirmation object from the Schlage API. After the command is sent, the lock state updates within a few seconds.
+
+### Step 4: Unlock a Door
+
+Send an unlock command to a specific door:
+
+```bash
+uv run <skill-dir>/scripts/client.py --action unlock --device-id "SCH-ENCODE-12345"
+```
+
+### Quick Reference
+
+| Action | Command | Description |
+| ------ | ------- | ----------- |
+| Authenticate | `--action schlage-login` | Log into Schlage (one-time setup) |
+| List locks | `--action list-locks` | List all Schlage locks with device IDs |
+| Lock status | `--action lock-status --device-id "SCH-..."` | Check if a specific door is locked/unlocked |
+| Lock door | `--action lock --device-id "SCH-..."` | Lock a specific door |
+| Unlock door | `--action unlock --device-id "SCH-..."` | Unlock a specific door |
+
+### Troubleshooting Lock Commands
+
+- **401 Unauthorized**: Your Schlage session has expired. Run `schlage-login` again.
+- **404 Not Found**: The `--device-id` may be wrong. Run `list-locks` to see valid device IDs.
+- **No locks shown**: Make sure you have Schlage locks set up on your Schlage account and that the `SCHLAGE_EMAIL`/`SCHLAGE_PASSWORD` env vars are correct.
+- **Lock doesn't respond**: Check the lock's battery level with `lock-status`. If below 10%, the batteries may need replacing.
 
 ## Multi-Step Provisioning Workflows
 
