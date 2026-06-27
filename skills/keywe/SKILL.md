@@ -151,13 +151,13 @@ uv run <skill-dir>/scripts/client.py --action unlock --device-id "SCH-ENCODE-123
 
 ### Quick Reference
 
-| Action | Command | Description |
-| ------ | ------- | ----------- |
-| Authenticate | `--action schlage-login` | Log into Schlage (one-time setup) |
-| List locks | `--action list-locks` | List all Schlage locks with device IDs |
-| Lock status | `--action lock-status --device-id "SCH-..."` | Check if a specific door is locked/unlocked |
-| Lock door | `--action lock --device-id "SCH-..."` | Lock a specific door |
-| Unlock door | `--action unlock --device-id "SCH-..."` | Unlock a specific door |
+| Action       | Command                                      | Description                                 |
+| ------------ | -------------------------------------------- | ------------------------------------------- |
+| Authenticate | `--action schlage-login`                     | Log into Schlage (one-time setup)           |
+| List locks   | `--action list-locks`                        | List all Schlage locks with device IDs      |
+| Lock status  | `--action lock-status --device-id "SCH-..."` | Check if a specific door is locked/unlocked |
+| Lock door    | `--action lock --device-id "SCH-..."`        | Lock a specific door                        |
+| Unlock door  | `--action unlock --device-id "SCH-..."`      | Unlock a specific door                      |
 
 ### Troubleshooting Lock Commands
 
