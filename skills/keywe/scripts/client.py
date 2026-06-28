@@ -17,14 +17,13 @@ load_dotenv()
 
 def get_env_config():
     api_key = os.getenv("KEYWE_API_KEY")
-    base_url = os.getenv("KEYWE_BASE_URL", "https://keywe.cloud").rstrip("/")
     
     if not api_key:
         print("ERROR: KEYWE_API_KEY environment variable is not set.", file=sys.stderr)
         print("Ask the user to export their API key from /settings.", file=sys.stderr)
         sys.exit(1)
         
-    return base_url, {
+    return "https://keywe.cloud", {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
@@ -56,8 +55,7 @@ def main():
     parser = argparse.ArgumentParser(description="KeyWe Core API Client")
     parser.add_argument("--action", required=True, choices=[
         "add-property", "add-access-point", "add-lock", "add-template", "add-reservation", "add-automation",
-        "schlage-login", "schlage-logout",
-        "lock", "unlock", "list-locks", "lock-status"
+        "schlage-login", "schlage-logout"
     ])
     parser.add_argument("--name")
     parser.add_argument("--address")
@@ -161,25 +159,6 @@ def main():
 
     elif args.action == "schlage-logout":
         res = requests.post(f"{base_url}/api/schlage/auth/logout", headers=headers)
-        handle_response(res)
-
-    elif args.action == "list-locks":
-        res = requests.get(f"{base_url}/api/schlage/locks", headers=headers)
-        handle_response(res)
-
-    elif args.action == "lock-status":
-        if not args.device_id:
-            print("ERROR: --device-id is required.", file=sys.stderr)
-            sys.exit(1)
-        res = requests.get(f"{base_url}/api/schlage/locks/{args.device_id}", headers=headers)
-        handle_response(res)
-
-    elif args.action in ("lock", "unlock"):
-        if not args.device_id:
-            print("ERROR: --device-id is required.", file=sys.stderr)
-            sys.exit(1)
-        path = f"{base_url}/api/schlage/locks/{args.device_id}/{args.action}"
-        res = requests.post(path, headers=headers)
         handle_response(res)
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ Follow these steps in order. Stop and check each step before moving to the next.
 
 ### Step 1: Create an Account
 
-1. Open a web browser and go to the KeyWe app URL (your host will tell you the address).
+1. Open a web browser and go to https://keywe.cloud.
 2. Click **Sign Up** or **Register**.
 3. Enter your name, email address, and a password.
 4. Check your email inbox for a verification message. Click the link in it to verify your email.
@@ -52,12 +52,8 @@ You need to tell the tool your API key so it can make requests. You do this by p
    export KEYWE_API_KEY="keywe_abc123def456ghi789"
    ```
 3. Press Enter to run it. You will not see any confirmation message — that is normal. It just worked silently.
-4. Now type or paste this and press Enter:
-   ```bash
-   export KEYWE_BASE_URL="https://keywe.cloud"
-   ```
 
-**What just happened?** You stored two pieces of information in your terminal session so the tool can find them. They will last as long as this terminal window stays open. If you close the terminal and come back later, you must run these two commands again.
+**What just happened?** You stored your API key in this terminal session so the CLI tool can find it. The API key will last as long as this terminal window stays open. If you close the terminal and come back later, you must run this command again.
 
 ### Step 5: (Optional) Set Up Schlage Smart Locks
 
@@ -96,14 +92,11 @@ uv run <skill-dir>/scripts/client.py --action add-property --name "Example Name"
 
 ## Using KeyWe as an API to Control Locks
 
-This section covers sending lock and unlock commands to Schlage smart locks through KeyWe's API proxy. These commands work on any Schlage lock connected to your account.
+This section covers sending lock and unlock commands to Schlage smart locks through KeyWe's API proxy. These commands use `curl` with the API key bearer token directly — the provisioning CLI client (`client.py`) is only for setup operations, not runtime lock control.
 
 ### Prerequisite: Schlage Authentication
 
-You must authenticate with Schlage before you can send lock commands. If you haven't done this yet:
-
-1. Set your Schlage credentials in the environment (see Step 5 above)
-2. Run the login command:
+You must authenticate with Schlage before you can send lock commands. The setup CLI handles this:
 
 ```bash
 uv run <skill-dir>/scripts/client.py --action schlage-login
@@ -111,60 +104,63 @@ uv run <skill-dir>/scripts/client.py --action schlage-login
 
 A successful response looks like `{"access_token": "...", "expires_in": 86400}`. You only need to do this once — the platform refreshes the token automatically.
 
-### Step 1: List Locks
+### Making API Calls
 
-Find all Schlage locks on your account and their device IDs:
+All lock control requests use `curl` with the API key. Include these in every request:
 
-```bash
-uv run <skill-dir>/scripts/client.py --action list-locks
+```
+Authorization: Bearer <your-api-key>
+Content-Type: application/json
 ```
 
-**Response:** An array of lock objects. Each lock has a `device_id` field (like `SCH-ENCODE-12345`) and a `name` field so you can identify which door is which. The response also includes `is_locked` (current state), `battery_level`, and `model_name`.
+Replace `<api-key>` with the user's API key from the setup guide. The base URL is always `https://keywe.cloud`.
+
+### Step 1: List Locks
+
+```bash
+curl -H "Authorization: Bearer <api-key>" https://keywe.cloud/api/schlage/locks
+```
+
+**Response:** An array of lock objects. Each lock has a `device_id` field (like `SCH-ENCODE-12345`) and a `name` field to identify which door is which. Also includes `is_locked`, `battery_level`, and `model_name`.
 
 ### Step 2: Check a Specific Lock's Status
 
-To check whether a particular door is locked or unlocked, along with its battery level and other details:
-
 ```bash
-uv run <skill-dir>/scripts/client.py --action lock-status --device-id "SCH-ENCODE-12345"
+curl -H "Authorization: Bearer <api-key>" https://keywe.cloud/api/schlage/locks/SCH-ENCODE-12345
 ```
 
 **Response:** `{"device_id": "SCH-ENCODE-12345", "name": "Front Door", "is_locked": true, "battery_level": 85, ...}`
 
 ### Step 3: Lock a Door
 
-Send a lock command to a specific door:
-
 ```bash
-uv run <skill-dir>/scripts/client.py --action lock --device-id "SCH-ENCODE-12345"
+curl -X POST -H "Authorization: Bearer <api-key>" -H "Content-Type: application/json" https://keywe.cloud/api/schlage/locks/SCH-ENCODE-12345/lock
 ```
 
 **Response:** A confirmation object from the Schlage API. After the command is sent, the lock state updates within a few seconds.
 
 ### Step 4: Unlock a Door
 
-Send an unlock command to a specific door:
-
 ```bash
-uv run <skill-dir>/scripts/client.py --action unlock --device-id "SCH-ENCODE-12345"
+curl -X POST -H "Authorization: Bearer <api-key>" -H "Content-Type: application/json" https://keywe.cloud/api/schlage/locks/SCH-ENCODE-12345/unlock
 ```
 
 ### Quick Reference
 
-| Action       | Command                                      | Description                                 |
-| ------------ | -------------------------------------------- | ------------------------------------------- |
-| Authenticate | `--action schlage-login`                     | Log into Schlage (one-time setup)           |
-| List locks   | `--action list-locks`                        | List all Schlage locks with device IDs      |
-| Lock status  | `--action lock-status --device-id "SCH-..."` | Check if a specific door is locked/unlocked |
-| Lock door    | `--action lock --device-id "SCH-..."`        | Lock a specific door                        |
-| Unlock door  | `--action unlock --device-id "SCH-..."`      | Unlock a specific door                      |
+| Action      | Method | Endpoint                                                   |
+| ----------- | ------ | ---------------------------------------------------------- |
+| List locks  | GET    | `/api/schlage/locks`                                       |
+| Lock status | GET    | `/api/schlage/locks/{device_id}`                           |
+| Lock door   | POST   | `/api/schlage/locks/{device_id}/lock`                      |
+| Unlock door | POST   | `/api/schlage/locks/{device_id}/unlock`                    |
+| Auth login  | POST   | `/api/schlage/auth/token` (form-encoded username/password) |
 
 ### Troubleshooting Lock Commands
 
 - **401 Unauthorized**: Your Schlage session has expired. Run `schlage-login` again.
-- **404 Not Found**: The `--device-id` may be wrong. Run `list-locks` to see valid device IDs.
-- **No locks shown**: Make sure you have Schlage locks set up on your Schlage account and that the `SCHLAGE_EMAIL`/`SCHLAGE_PASSWORD` env vars are correct.
-- **Lock doesn't respond**: Check the lock's battery level with `lock-status`. If below 10%, the batteries may need replacing.
+- **404 Not Found**: The `device_id` may be wrong. List locks to see valid device IDs.
+- **No locks shown**: Make sure the Schlage account has locks and `SCHLAGE_EMAIL`/`SCHLAGE_PASSWORD` env vars are correct.
+- **Lock doesn't respond**: Check the lock's battery level via status endpoint. If below 10%, batteries may need replacing.
 
 ## Multi-Step Provisioning Workflows
 
