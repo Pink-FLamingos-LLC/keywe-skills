@@ -15,7 +15,7 @@ This skill works in a back-and-forth conversation. Do NOT dump all steps at once
 
 1. **Ask the user** if they already have a KeyWe account and API key.
 2. Walk through creation steps **one at a time** — wait for confirmation before proceeding to the next.
-3. **When credentials are ready**, ask the user to create a `.env` file and tell you when it's done so you can run the setup script.
+3. **When credentials are ready**, ask the user to create a `.env` file and tell you when it's done so you can proceed.
 
 ### Step 1: Create an Account
 
@@ -27,59 +27,71 @@ This skill works in a back-and-forth conversation. Do NOT dump all steps at once
 
 **Stop here.** Ask the user to confirm they have an account and are logged in.
 
-### Step 2: Generate an API Key (The Secret Token)
-
-An API key is a long secret code that lets the automation tool prove it is you. Think of it like a password for the tool to use.
+### Step 2: Generate an API Key
 
 1. After logging in, click **Settings** in the menu.
 2. Scroll down to the **API Keys** section.
 3. Click **Generate New API Key**.
-4. Type a label like "AI Agent" (this is just so you can remember what it is for).
-5. **Important**: A long secret code will appear one time only, starting with `keywe_`. Highlight and copy it right now — the page will never show the full code again! If you lose it, you will have to generate a new one.
+4. Type a label like "AI Agent".
+5. **Important**: A long secret code will appear one time only, starting with `keywe_`. Copy it now — the page will never show it again.
 
 **Stop here.** Ask the user to confirm they have copied their API key. Tell them: _"I don't need you to send me the key — just save it in the `.env` file in the next step. I never want to see your secrets for security reasons."_
 
 ### Step 3: Create a `.env` File
 
-Determine the project root path and tell the user exactly where to put the file. For example: _"Create a file at `<absolute-path>/.env` with these contents:"_
+First check if `.env` already exists in the project root. Do NOT read its contents — just check existence.
+
+**If `.env` does not exist:** Create the file yourself with placeholder values. Write exactly this to `<project-root>/.env`:
 
 ```bash
-KEYWE_API_KEY="keywe_abc123def456ghi789"
+KEYWE_API_KEY="keywe_YOUR_API_KEY_HERE"
 SCHLAGE_EMAIL="you@example.com"
 SCHLAGE_PASSWORD="your_schlage_password"
 ```
 
+Then tell the user: _"I created a `.env` file at `<absolute-path>/.env`. Open it and replace the placeholder values with your API key from Step 2 and your Schlage account email/password. I don't want to see the actual values — your secrets stay on your machine for security. Let me know once you've saved it."_
+
+**If `.env` already exists:** Tell the user: _"A `.env` file already exists at `<absolute-path>/.env`. Please open it and make sure `KEYWE_API_KEY`, `SCHLAGE_EMAIL`, and `SCHLAGE_PASSWORD` are set with your real credentials. I don't need to see the values — just let me know when it's ready."_
+
 Replace each value with the actual credentials:
 
 - `KEYWE_API_KEY` — the `keywe_...` code from Step 2.
-- `SCHLAGE_EMAIL` — the email used for your Schlage account (skip if no Schlage account).
-- `SCHLAGE_PASSWORD` — the password for your Schlage account (skip if no Schlage account).
+- `SCHLAGE_EMAIL` — the email used for your Schlage account.
+- `SCHLAGE_PASSWORD` — the password for your Schlage account.
 
-**Important:** The `.env` file contains secrets. Never share it, commit it to git, or paste its contents into a chat. It is already listed in `.gitignore` — confirm with the user if they're unsure. The file must be at `<project-root>/.env` (replace `<project-root>` with the absolute path you gave them).
+**Important:** The `.env` file contains secrets. Never share it, commit it to git, or paste its contents into a chat.
 
-**Stop and wait.** Tell the user: _"Let me know once you have created the `.env` file and I will connect your Schlage locks. I don't want to see the actual values — your secrets stay on your machine for security."_
+**Stop and wait.** Do NOT proceed until the user confirms the `.env` file is in place.
 
-Do NOT proceed until the user confirms the `.env` file is in place.
+### Step 4: Link Your Schlage Account
 
-### Step 4: Authenticate with Schlage
+Once the user confirms `.env` is ready, tell them: _"I'm linking your Schlage account now."_
 
-Once the user confirms `.env` is ready, run this yourself:
+Then run this yourself (the user doesn't need to know about this endpoint — just do it):
 
 ```bash
 uv run <skill-dir>/scripts/client.py --action schlage-login
 ```
 
-If the response includes `"access_token"`, the connection succeeded. If it errors, ask the user to double-check their `.env` values and try again.
+If it succeeds, tell the user: _"Your Schlage account is linked. Let me list your locks."_
 
-### Step 5: List Locks and Provision Them
+If it fails, ask the user to double-check their Schlage credentials in `.env` and confirm when fixed.
 
-Once Schlage is connected, list the user's locks (run this yourself):
+**Note:** The Schlage session is maintained automatically by the platform after this initial link.
+
+### Step 5: List Locks
+
+Once everything is set up, list the user's locks (run this yourself):
 
 ```bash
 curl -H "Authorization: Bearer <api-key>" https://keywe.cloud/api/schlage/locks
 ```
 
-Show the user the available locks and ask which ones they want to add. For each lock, run the provisioning CLI yourself:
+Show the user the results and explain their options:
+
+**Locks can be controlled immediately** via the lock/unlock API using their `device_id` — no provisioning needed. If the user just wants to lock/unlock doors, you're done here.
+
+**Optionally**, locks can be provisioned into properties and rooms for automations, guest access codes, and messaging. If the user wants that, ask them for property/room names and run:
 
 ```bash
 uv run <skill-dir>/scripts/client.py --action add-property --name "Property Name"
@@ -87,23 +99,11 @@ uv run <skill-dir>/scripts/client.py --action add-access-point --name "Room Name
 uv run <skill-dir>/scripts/client.py --action add-lock --name "Door Name" --access-point-id "ap_<id>" --device-id "SCH-ENCODE-XXXXX" --lock-type "schlage_encode"
 ```
 
-Walk through this with the user one lock at a time, asking them what to name each property, room, and door.
+Ask the user what they want to do: _"Your locks are ready to use. I can lock/unlock them anytime. Would you also like to set up properties and rooms for automations and guest access codes?"_
 
 ## Using KeyWe as an API to Control Locks
 
 When the user wants to lock or unlock a door, run the commands yourself. Never ask the user to run curl.
-
-### Prerequisite: Schlage Authentication
-
-The `.env` file must be present with `KEYWE_API_KEY`, `SCHLAGE_EMAIL`, and `SCHLAGE_PASSWORD`. Run this once upfront:
-
-```bash
-uv run <skill-dir>/scripts/client.py --action schlage-login
-```
-
-### Making API Calls
-
-All lock control requests use the API key from `.env`. Run these yourself when the user asks:
 
 ### List Locks
 
@@ -131,25 +131,26 @@ curl -X POST -H "Authorization: Bearer <api-key>" -H "Content-Type: application/
 
 ### Quick Reference
 
-| Action      | Method | Endpoint                                                   |
-| ----------- | ------ | ---------------------------------------------------------- |
-| List locks  | GET    | `/api/schlage/locks`                                       |
-| Lock status | GET    | `/api/schlage/locks/{device_id}`                           |
-| Lock door   | POST   | `/api/schlage/locks/{device_id}/lock`                      |
-| Unlock door | POST   | `/api/schlage/locks/{device_id}/unlock`                    |
-| Auth login  | POST   | `/api/schlage/auth/token` (form-encoded username/password) |
+| Action      | Method | Endpoint                                |
+| ----------- | ------ | --------------------------------------- |
+| List locks  | GET    | `/api/schlage/locks`                    |
+| Lock status | GET    | `/api/schlage/locks/{device_id}`        |
+| Lock door   | POST   | `/api/schlage/locks/{device_id}/lock`   |
+| Unlock door | POST   | `/api/schlage/locks/{device_id}/unlock` |
 
 ### Troubleshooting Lock Commands
 
-- **401 Unauthorized**: Schlage session expired. Run `schlage-login` again.
+- **401 Unauthorized**: The Schlage session may have expired. Ask the user to re-link their Schlage account in the KeyWe web UI (Settings → Schlage).
 - **404 Not Found**: The `device_id` may be wrong. List locks to see valid device IDs.
-- **No locks shown**: Ask the user to verify `SCHLAGE_EMAIL`/`SCHLAGE_PASSWORD` in `.env` are correct.
+- **No locks shown**: Ask the user to verify they've added locks in the KeyWe web UI (Locks → Sync Locks).
 - **Lock doesn't respond**: Check the lock's battery level via status endpoint. If below 10%, batteries may need replacing.
-- **Auth/connection errors**: Ask the user to confirm `.env` exists and all three variables are set correctly.
+- **Auth/connection errors**: Ask the user to confirm `.env` exists and `KEYWE_API_KEY` is set correctly.
 
 ## Multi-Step Provisioning Workflows
 
-Follow this structural hierarchy. Do not skip dependency layers.
+Provisioning is optional — locks work standalone for lock/unlock without any of this. Only use this flow if the user wants automations, guest access codes, or messaging tied to specific properties.
+
+If provisioning, follow this structural hierarchy. Do not skip dependency layers.
 
 ### 1. Provisioning Infrastructure
 
@@ -216,23 +217,6 @@ uv run <skill-dir>/scripts/client.py --action add-automation --name "Welcome Seq
 ```
 
 **Response:** `{"id": "auto_<id>", "name": "...", "triggers": [...], "conditions": [], "actions": []}`
-
-### Authenticate Schlage Credentials
-
-```bash
-uv run <skill-dir>/scripts/client.py --action schlage-login
-```
-
-Reads `SCHLAGE_EMAIL` and `SCHLAGE_PASSWORD` from `.env`, authenticates with the Schlage API, and stores credentials with the platform for automatic token refresh.
-**Response:** `{"access_token": "...", "expires_in": 86400}`
-
-### Clear Schlage Credentials
-
-```bash
-uv run <skill-dir>/scripts/client.py --action schlage-logout
-```
-
-**Response:** `{"detail": "ok"}`
 
 ## Embed Widget (Guest-Facing Verification)
 
@@ -315,9 +299,9 @@ Load the relevant reference when the agent needs full field schemas, validation 
 
 ## Safety Guardrails
 
-- NEVER ask the user to type their API key or Schlage credentials into a chat prompt. Always use the `.env` file approach.
+- NEVER ask the user to type their API key into a chat prompt. Always use the `.env` file approach.
 - NEVER ask the user to paste the contents of `.env` into the chat.
 - NEVER ask the user to run terminal commands. You run all commands yourself.
 - Explicitly tell the user you don't want to see their secrets for security reasons whenever credentials come up.
-- If an action returns 401, verify `KEYWE_API_KEY` is set (check `.env` file exists and is formatted correctly).
-- If Schlage operations fail with 401, run `schlage-login` first, or verify `SCHLAGE_EMAIL` and `SCHLAGE_PASSWORD` in `.env` are correct.
+- If an action returns 401, ask the user to re-link their Schlage account in the KeyWe web UI.
+- If no locks are shown, ask the user to verify they've added locks in the KeyWe web UI.

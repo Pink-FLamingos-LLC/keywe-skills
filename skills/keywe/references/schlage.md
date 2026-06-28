@@ -3,8 +3,7 @@
 ## Contents
 
 - Architecture
-- Authentication Flow (login, auto-refresh, logout)
-- Proxy Endpoints (lock ops, access codes, auth)
+- Proxy Endpoints (lock ops, access codes)
 - Lock Sync Behavior
 - MCP Tools
 - Error Handling
@@ -16,31 +15,6 @@ KeyWe proxies all Schlage API calls through `/api/schlage/[...path]`. The pyschl
 ```
 Client → KeyWe Proxy → pyschlage API → Schlage Cloud
 ```
-
-## Authentication Flow
-
-1. **Login**: `POST /api/schlage/auth/token` with form-encoded `username` + `password`
-   - Proxy forwards to pyschlage `/auth/token`
-   - On success, stores `access_token`, email, password in `auth_keys` table
-   - Sets `token` cookie (httpOnly, secure, 24h)
-   - Returns `{ "access_token": "...", "expires_in": 86400 }`
-
-2. **Auto-refresh**: On `401` responses, proxy calls `refreshToken()` which:
-   - Reads email + password from `auth_keys` table
-   - Calls `/auth/token` again
-   - Updates stored token
-   - Retries the original request
-
-3. **Logout**: `POST /api/schlage/auth/logout`
-   - Clears `auth_keys` row for schlage provider
-   - Clears `token` cookie
-
-**Credentials stored in `auth_keys` table:**
-
-- `key` (access token)
-- `email` (Schlage account email)
-- `password` (Schlage account password, stored for auto-refresh)
-- `access_token_expires_at` (timestamp)
 
 ## Proxy Endpoints
 
@@ -75,13 +49,6 @@ All methods (GET, POST, PUT, PATCH, DELETE) accepted. Proxied paths:
 }
 ```
 
-### Auth
-
-| Endpoint                   | Method | Description                                    |
-| -------------------------- | ------ | ---------------------------------------------- |
-| `/api/schlage/auth/token`  | POST   | Login with username + password (form-encoded). |
-| `/api/schlage/auth/logout` | POST   | Logout and clear stored credentials.           |
-
 ## Lock Sync Behavior
 
 On GET responses for `/locks` and `/locks/{id}`, the proxy auto-upserts lock data into the local DB:
@@ -105,8 +72,6 @@ This means you do not need to manually create lock records — listing locks via
 
 The MCP server exposes these Schlage tools:
 
-- `schlage-login` — Authenticate with Schlage credentials
-- `schlage-logout` — Clear Schlage authentication
 - `schlage-credentials-status` — Check if Schlage credentials are configured
 - `schlage-list-locks` — List all Schlage locks
 - `schlage-get-lock` — Get a single lock by device ID
